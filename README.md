@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # EKA - Esnaf Kurye Asistanı
 
 ![Flutter](https://img.shields.io/badge/Flutter-3.9.2-blue)
@@ -111,6 +110,4 @@ Sorularınız için proje yöneticisiyle iletişime geçin.
 ---
 
 **Not**: Bu uygulama MVP (Minimum Viable Product) aşamasındadır ve aktif olarak geliştirilmektedir.
-=======
-# eka-app
->>>>>>> a060c190d0d921eaa208604a9ed623d923515b70
+

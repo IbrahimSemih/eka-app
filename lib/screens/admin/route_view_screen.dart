@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../models/route_model.dart';
 import '../../models/stop_model.dart';
 import '../../providers/stops_provider.dart';
@@ -64,7 +65,7 @@ class RouteViewScreen extends ConsumerWidget {
           return Column(
             children: [
               // Rota istatistikleri
-              _buildRouteStatistics(route),
+              _buildRouteStatistics(context, route),
 
               // Duraklar listesi
               Expanded(
@@ -196,7 +197,7 @@ class RouteViewScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildRouteStatistics(RouteModel route) {
+  Widget _buildRouteStatistics(BuildContext context, RouteModel route) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -314,6 +315,149 @@ class RouteViewScreen extends ConsumerWidget {
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 16),
+          // Navigasyon butonu
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                // Koordinatları olan durakları filtrele
+                final stopsWithCoordinates = route.stops
+                    .where(
+                      (stop) => stop.latitude != null && stop.longitude != null,
+                    )
+                    .toList();
+
+                if (stopsWithCoordinates.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'Navigasyon için koordinatları olan durak bulunamadı',
+                      ),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
+                  return;
+                }
+
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Row(
+                      children: [
+                        Icon(Icons.navigation, color: Colors.blue),
+                        SizedBox(width: 8),
+                        Text('Rota Navigasyonu'),
+                      ],
+                    ),
+                    content: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '${stopsWithCoordinates.length} durak için optimize edilmiş rota navigasyonu',
+                          style: const TextStyle(fontSize: 16),
+                        ),
+                        const SizedBox(height: 16),
+                        Card(
+                          child: ListTile(
+                            leading: const Icon(Icons.map, color: Colors.blue),
+                            title: const Text('Google Maps'),
+                            trailing: const Icon(
+                              Icons.arrow_forward_ios,
+                              size: 16,
+                            ),
+                            onTap: () async {
+                              Navigator.pop(context);
+                              if (stopsWithCoordinates.isEmpty) return;
+                              final firstStop = stopsWithCoordinates.first;
+                              final googleMapsUrl =
+                                  'https://maps.google.com/maps?daddr=${firstStop.latitude},${firstStop.longitude}';
+
+                              try {
+                                final googleUri = Uri.parse(googleMapsUrl);
+                                if (await canLaunchUrl(googleUri)) {
+                                  await launchUrl(
+                                    googleUri,
+                                    mode: LaunchMode.externalApplication,
+                                  );
+                                  print(
+                                    '✅ Google Maps rota açıldı: $googleMapsUrl',
+                                  );
+                                } else {
+                                  print('❌ Google Maps açılamadı');
+                                }
+                              } catch (e) {
+                                print('❌ Google Maps açılırken hata: $e');
+                              }
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Card(
+                          child: ListTile(
+                            leading: const Icon(
+                              Icons.map_outlined,
+                              color: Colors.red,
+                            ),
+                            title: const Text('Yandex Maps'),
+                            trailing: const Icon(
+                              Icons.arrow_forward_ios,
+                              size: 16,
+                            ),
+                            onTap: () async {
+                              Navigator.pop(context);
+                              if (stopsWithCoordinates.isEmpty) return;
+                              final firstStop = stopsWithCoordinates.first;
+                              final yandexMapsUrl =
+                                  'https://yandex.com.tr/maps/?pt=${firstStop.longitude},${firstStop.latitude}&z=16&l=map';
+
+                              try {
+                                final yandexUri = Uri.parse(yandexMapsUrl);
+                                if (await canLaunchUrl(yandexUri)) {
+                                  await launchUrl(
+                                    yandexUri,
+                                    mode: LaunchMode.externalApplication,
+                                  );
+                                  print(
+                                    '✅ Yandex Maps rota açıldı: $yandexMapsUrl',
+                                  );
+                                } else {
+                                  print('❌ Yandex Maps açılamadı');
+                                }
+                              } catch (e) {
+                                print('❌ Yandex Maps açılırken hata: $e');
+                              }
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('İptal'),
+                      ),
+                    ],
+                  ),
+                );
+              },
+              icon: const Icon(Icons.navigation, size: 20),
+              label: const Text('Navigasyona Git'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: Colors.blue[800],
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 2,
+                textStyle: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
           ),
         ],
       ),

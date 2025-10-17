@@ -128,6 +128,9 @@ final stopsStatisticsProvider = Provider<StopsStatistics>((ref) {
         completedStops: stops
             .where((s) => s.status == StopStatus.completed)
             .length,
+        cancelledStops: stops
+            .where((s) => s.status == StopStatus.cancelled)
+            .length,
         todayStops: todayStops.length,
         todayCompletedStops: todayStops
             .where((s) => s.status == StopStatus.completed)
@@ -167,6 +170,19 @@ class StopsNotifier extends Notifier<void> {
           .doc(mainRouteId)
           .get();
 
+      // Adresi koordinatlara dönüştür
+      print('🗺️ Adres koordinatlara dönüştürülüyor...');
+      final geocodingService = ref.read(geocodingServiceProvider);
+      final coordinates = await geocodingService.addressToCoordinates(address);
+
+      if (coordinates == null) {
+        print('⚠️ Koordinat bulunamadı, durak koordinatsız olarak eklenecek');
+      } else {
+        print(
+          '✅ Koordinatlar bulundu: ${coordinates.latitude}, ${coordinates.longitude}',
+        );
+      }
+
       final newStop = StopModel(
         id: uuid.v4(),
         customerName: customerName,
@@ -176,6 +192,8 @@ class StopsNotifier extends Notifier<void> {
         createdAt: DateTime.now(),
         createdBy: createdBy,
         notes: notes,
+        latitude: coordinates?.latitude,
+        longitude: coordinates?.longitude,
       );
 
       if (routeDoc.exists) {
@@ -648,6 +666,7 @@ class StopsStatistics {
   final int assignedStops;
   final int inProgressStops;
   final int completedStops;
+  final int cancelledStops;
   final int todayStops;
   final int todayCompletedStops;
 
@@ -657,6 +676,7 @@ class StopsStatistics {
     required this.assignedStops,
     required this.inProgressStops,
     required this.completedStops,
+    required this.cancelledStops,
     required this.todayStops,
     required this.todayCompletedStops,
   });
@@ -668,6 +688,7 @@ class StopsStatistics {
       assignedStops: 0,
       inProgressStops: 0,
       completedStops: 0,
+      cancelledStops: 0,
       todayStops: 0,
       todayCompletedStops: 0,
     );

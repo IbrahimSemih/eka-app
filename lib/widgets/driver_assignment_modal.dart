@@ -39,7 +39,7 @@ class _DriverAssignmentModalState extends ConsumerState<DriverAssignmentModal> {
 
     return Dialog(
       child: Container(
-        width: MediaQuery.of(context).size.width * 0.9,
+        width: MediaQuery.of(context).size.width * 0.85,
         constraints: BoxConstraints(
           maxHeight: MediaQuery.of(context).size.height * 0.8,
         ),
@@ -75,7 +75,7 @@ class _DriverAssignmentModalState extends ConsumerState<DriverAssignmentModal> {
             // Content
             Flexible(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -182,13 +182,16 @@ class _DriverAssignmentModalState extends ConsumerState<DriverAssignmentModal> {
                                 },
                                 title: Row(
                                   children: [
-                                    Text(
-                                      driver.name,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: isCurrentlyAssigned
-                                            ? Colors.green[700]
-                                            : null,
+                                    Expanded(
+                                      child: Text(
+                                        driver.name,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: isCurrentlyAssigned
+                                              ? Colors.green[700]
+                                              : null,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
                                     if (isCurrentlyAssigned) ...[
@@ -219,11 +222,15 @@ class _DriverAssignmentModalState extends ConsumerState<DriverAssignmentModal> {
                                 subtitle: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(driver.email),
+                                    Text(
+                                      driver.email,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                     const SizedBox(height: 2),
                                     Text(
                                       'Kayıt: ${_formatDate(driver.createdAt)}',
                                       style: const TextStyle(fontSize: 12),
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ],
                                 ),

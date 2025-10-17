@@ -20,19 +20,66 @@ class GeocodingService {
         throw Exception('Adres boş olamaz');
       }
 
+      // Adresi Türkiye için optimize et
+      String optimizedAddress = _optimizeAddressForTurkey(address);
+      print('🔍 Optimize edilmiş adres: $optimizedAddress');
+
       // Geocoding API'sini kullanarak adresi koordinatlara dönüştür
-      List<Location> locations = await locationFromAddress(address);
+      List<Location> locations = await locationFromAddress(optimizedAddress);
 
       if (locations.isEmpty) {
-        throw Exception('Adres bulunamadı: $address');
+        // İlk deneme başarısızsa, orijinal adresle tekrar dene
+        print(
+          '⚠️ Optimize edilmiş adres bulunamadı, orijinal adres deneniyor...',
+        );
+        locations = await locationFromAddress(address);
+
+        if (locations.isEmpty) {
+          throw Exception('Adres bulunamadı: $address');
+        }
       }
 
       final location = locations.first;
+      print(
+        '✅ Koordinatlar bulundu: ${location.latitude}, ${location.longitude}',
+      );
+
+      // Türkiye sınırları içinde mi kontrol et
+      if (!_isInTurkey(location.latitude, location.longitude)) {
+        print('⚠️ Koordinatlar Türkiye sınırları dışında');
+        return null;
+      }
+
       return (latitude: location.latitude, longitude: location.longitude);
     } catch (e) {
-      print('Geocoding hatası: $e');
+      print('❌ Geocoding hatası: $e');
       return null;
     }
+  }
+
+  /// Adresi Türkiye için optimize eder
+  String _optimizeAddressForTurkey(String address) {
+    // Türkiye ekle
+    if (!address.toLowerCase().contains('türkiye') &&
+        !address.toLowerCase().contains('turkey') &&
+        !address.toLowerCase().contains('tr')) {
+      return '$address, Türkiye';
+    }
+    return address;
+  }
+
+  /// Koordinatların Türkiye sınırları içinde olup olmadığını kontrol eder
+  bool _isInTurkey(double latitude, double longitude) {
+    // Türkiye'nin yaklaşık sınırları
+    const double minLat = 35.0;
+    const double maxLat = 42.0;
+    const double minLon = 25.0;
+    const double maxLon = 45.0;
+
+    return latitude >= minLat &&
+        latitude <= maxLat &&
+        longitude >= minLon &&
+        longitude <= maxLon;
   }
 
   /// Koordinatları adres metnine dönüştürür

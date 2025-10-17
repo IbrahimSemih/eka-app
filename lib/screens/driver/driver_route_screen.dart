@@ -282,7 +282,8 @@ class DriverRouteScreen extends ConsumerWidget {
                       ),
                     ),
                     if (stop.status == StopStatus.pending ||
-                        stop.status == StopStatus.assigned)
+                        stop.status == StopStatus.assigned) ...[
+                      // Teslim Edildi butonu
                       IconButton(
                         onPressed: () => _markAsCompleted(context, ref, stop),
                         icon: const Icon(
@@ -292,6 +293,17 @@ class DriverRouteScreen extends ConsumerWidget {
                         ),
                         tooltip: 'Teslim Edildi',
                       ),
+                      // Ulaşılamadı butonu
+                      IconButton(
+                        onPressed: () => _markAsFailed(context, ref, stop),
+                        icon: const Icon(
+                          Icons.cancel,
+                          color: Colors.red,
+                          size: 32,
+                        ),
+                        tooltip: 'Ulaşılamadı',
+                      ),
+                    ],
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -673,6 +685,76 @@ class DriverRouteScreen extends ConsumerWidget {
                 style: const TextStyle(fontSize: 16),
               ),
               backgroundColor: Colors.green,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                '❌ Hata: ${e.toString()}',
+                style: const TextStyle(fontSize: 16),
+              ),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _markAsFailed(
+    BuildContext context,
+    WidgetRef ref,
+    StopModel stop,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text(
+          'Ulaşılamadı',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          '${stop.customerName} adresine ulaşılamadı mı?\n\nBu durum teslimatı iptal edecektir.',
+          style: const TextStyle(fontSize: 16),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('İptal', style: TextStyle(fontSize: 16)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
+            child: const Text(
+              'Evet, Ulaşılamadı',
+              style: TextStyle(fontSize: 16, color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && context.mounted) {
+      try {
+        await ref
+            .read(driverRouteNotifierProvider.notifier)
+            .updateStopStatus(stop.id, StopStatus.cancelled);
+
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                '❌ ${stop.customerName} ulaşılamadı olarak işaretlendi',
+                style: const TextStyle(fontSize: 16),
+              ),
+              backgroundColor: Colors.red,
               duration: const Duration(seconds: 3),
             ),
           );

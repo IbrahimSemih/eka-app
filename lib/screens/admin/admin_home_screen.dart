@@ -125,6 +125,10 @@ class AdminHomeScreen extends ConsumerWidget {
                   ),
                 ],
               ),
+              const SizedBox(height: 12),
+
+              // Başarı oranı kartı
+              _buildSuccessRateCard(context, statistics),
               const SizedBox(height: 24),
 
               // Genel özet
@@ -175,10 +179,21 @@ class AdminHomeScreen extends ConsumerWidget {
                         Icons.check_circle,
                         Colors.green,
                       ),
+                      const Divider(),
+                      _buildSummaryRow(
+                        'İptal Edilen',
+                        '${statistics.cancelledStops}',
+                        Icons.cancel,
+                        Colors.red,
+                      ),
                     ],
                   ),
                 ),
               ),
+              const SizedBox(height: 16),
+
+              // Gerçek zamanlı durum kartı
+              _buildRealTimeStatusCard(context, statistics),
               const SizedBox(height: 24),
 
               // Hızlı erişim menüsü
@@ -391,6 +406,331 @@ class AdminHomeScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Widget _buildSuccessRateCard(BuildContext context, statistics) {
+    final totalToday = statistics.todayStops;
+    final completedToday = statistics.todayCompletedStops;
+    final failedToday = statistics.cancelledStops;
+    final successRate = totalToday > 0
+        ? (completedToday / totalToday * 100)
+        : 0.0;
+
+    return Card(
+      elevation: 3,
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          gradient: LinearGradient(
+            colors: [Colors.green[50]!, Colors.blue[50]!],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Icon(Icons.analytics, color: Colors.green[700], size: 28),
+                const SizedBox(width: 12),
+                Text(
+                  'Başarı Oranı',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green[700],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildSuccessMetric(
+                    'Başarılı',
+                    '$completedToday',
+                    Colors.green,
+                    Icons.check_circle,
+                  ),
+                ),
+                Expanded(
+                  child: _buildSuccessMetric(
+                    'Başarısız',
+                    '$failedToday',
+                    Colors.red,
+                    Icons.cancel,
+                  ),
+                ),
+                Expanded(
+                  child: _buildSuccessMetric(
+                    'Oran',
+                    '${successRate.toStringAsFixed(1)}%',
+                    Colors.blue,
+                    Icons.trending_up,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            // Progress bar
+            LinearProgressIndicator(
+              value: successRate / 100,
+              backgroundColor: Colors.grey[300],
+              valueColor: AlwaysStoppedAnimation<Color>(
+                successRate >= 80
+                    ? Colors.green
+                    : successRate >= 60
+                    ? Colors.orange
+                    : Colors.red,
+              ),
+              minHeight: 8,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              successRate >= 80
+                  ? 'Mükemmel performans! 🎉'
+                  : successRate >= 60
+                  ? 'İyi performans 👍'
+                  : 'Performansı iyileştirmek gerekiyor 📈',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: successRate >= 80
+                    ? Colors.green[700]
+                    : successRate >= 60
+                    ? Colors.orange[700]
+                    : Colors.red[700],
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSuccessMetric(
+    String label,
+    String value,
+    Color color,
+    IconData icon,
+  ) {
+    return Column(
+      children: [
+        Icon(icon, color: color, size: 24),
+        const SizedBox(height: 8),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: color,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRealTimeStatusCard(BuildContext context, statistics) {
+    final completedStops = statistics.completedStops;
+    final cancelledStops = statistics.cancelledStops;
+    final activeStops =
+        statistics.pendingStops +
+        statistics.assignedStops +
+        statistics.inProgressStops;
+
+    return Card(
+      elevation: 3,
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          gradient: LinearGradient(
+            colors: [Colors.blue[50]!, Colors.purple[50]!],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Icon(Icons.timeline, color: Colors.blue[700], size: 28),
+                const SizedBox(width: 12),
+                Text(
+                  'Gerçek Zamanlı Durum',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue[700],
+                  ),
+                ),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.green[100],
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: const BoxDecoration(
+                          color: Colors.green,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'CANLI',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green[700],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildRealTimeMetric(
+                    'Aktif Görevler',
+                    '$activeStops',
+                    Colors.orange,
+                    Icons.assignment,
+                  ),
+                ),
+                Expanded(
+                  child: _buildRealTimeMetric(
+                    'Tamamlanan',
+                    '$completedStops',
+                    Colors.green,
+                    Icons.check_circle,
+                  ),
+                ),
+                Expanded(
+                  child: _buildRealTimeMetric(
+                    'İptal Edilen',
+                    '$cancelledStops',
+                    Colors.red,
+                    Icons.cancel,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            // Durum çubuğu
+            Container(
+              height: 12,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(6),
+                color: Colors.grey[300],
+              ),
+              child: Row(
+                children: [
+                  if (completedStops > 0)
+                    Expanded(
+                      flex: completedStops,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.green,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                      ),
+                    ),
+                  if (cancelledStops > 0)
+                    Expanded(
+                      flex: cancelledStops,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                      ),
+                    ),
+                  if (activeStops > 0)
+                    Expanded(
+                      flex: activeStops,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.orange,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Son güncelleme: ${_getCurrentTime()}',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRealTimeMetric(
+    String label,
+    String value,
+    Color color,
+    IconData icon,
+  ) {
+    return Column(
+      children: [
+        Icon(icon, color: color, size: 24),
+        const SizedBox(height: 8),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            color: color,
+            fontWeight: FontWeight.w500,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
+  }
+
+  String _getCurrentTime() {
+    final now = DateTime.now();
+    return '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
   }
 
   Future<void> _showOptimizationDialog(
