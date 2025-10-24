@@ -15,7 +15,10 @@ class AuthService {
   // Kullanıcı verilerini Firestore'dan getir
   Future<UserModel?> getUserData(String uid) async {
     try {
-      DocumentSnapshot doc = await _firestore.collection('users').doc(uid).get();
+      DocumentSnapshot doc = await _firestore
+          .collection('users')
+          .doc(uid)
+          .get();
       if (doc.exists) {
         return UserModel.fromFirestore(doc);
       }
@@ -35,10 +38,8 @@ class AuthService {
   }) async {
     try {
       // Firebase Auth ile kullanıcı oluştur
-      UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
+      UserCredential userCredential = await _auth
+          .createUserWithEmailAndPassword(email: email, password: password);
 
       // Kullanıcı verisini oluştur
       UserModel newUser = UserModel(
@@ -143,4 +144,3 @@ class AuthService {
     }
   }
 }
-

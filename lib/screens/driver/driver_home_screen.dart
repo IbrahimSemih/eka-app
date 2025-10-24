@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/stops_provider.dart';
-import '../../providers/driver_route_provider.dart';
 import '../auth/login_screen.dart';
 import 'driver_route_screen.dart';
 

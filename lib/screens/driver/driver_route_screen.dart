@@ -4,6 +4,8 @@ import '../../providers/driver_route_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../models/stop_model.dart';
 import '../../models/user_model.dart';
+import 'google_maps_screen.dart';
+import 'simple_google_maps_screen.dart';
 
 /// Sürücü rota ekranı - Optimize edilmiş, büyük yazılı, yüksek kontrastlı
 class DriverRouteScreen extends ConsumerWidget {
@@ -77,7 +79,7 @@ class DriverRouteScreen extends ConsumerWidget {
     return Column(
       children: [
         // Rota özeti
-        _buildRouteSummary(route),
+        _buildRouteSummary(context, ref, route),
 
         // Duraklar listesi
         Expanded(
@@ -99,7 +101,7 @@ class DriverRouteScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildRouteSummary(route) {
+  Widget _buildRouteSummary(BuildContext context, WidgetRef ref, route) {
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.all(16),
@@ -162,6 +164,67 @@ class DriverRouteScreen extends ConsumerWidget {
                   '${route.completedStops}',
                   Icons.check_circle,
                   Colors.green[300]!,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          // Google Maps butonları
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => _openGoogleMaps(context),
+                  icon: const Icon(Icons.map, color: Colors.white, size: 20),
+                  label: const Text(
+                    'Haritada Göster',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green[600],
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 12,
+                      horizontal: 16,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    elevation: 2,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => _openSimpleGoogleMaps(context),
+                  icon: const Icon(
+                    Icons.map_outlined,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                  label: const Text(
+                    'Test Harita',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue[600],
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 12,
+                      horizontal: 16,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    elevation: 2,
+                  ),
                 ),
               ),
             ],
@@ -367,6 +430,25 @@ class DriverRouteScreen extends ConsumerWidget {
                     ),
                   ),
                 ],
+
+                // Harita butonu
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () => _openGoogleMaps(context),
+                    icon: const Icon(Icons.map, size: 20),
+                    label: const Text('Haritada Göster'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green[600],
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -773,5 +855,21 @@ class DriverRouteScreen extends ConsumerWidget {
         }
       }
     }
+  }
+
+  /// Google Maps entegre ekranını açar
+  void _openGoogleMaps(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const GoogleMapsScreen()),
+    );
+  }
+
+  /// Basit Google Maps test ekranını açar
+  void _openSimpleGoogleMaps(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const SimpleGoogleMapsScreen()),
+    );
   }
 }

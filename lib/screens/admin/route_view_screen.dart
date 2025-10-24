@@ -13,6 +13,13 @@ import 'add_stop_screen.dart';
 class RouteViewScreen extends ConsumerWidget {
   const RouteViewScreen({super.key});
 
+  // Önceden tanımlı konumlar
+  static const List<Map<String, dynamic>> _predefinedLocations = [
+    {'name': 'İstanbul Merkez', 'latitude': 41.0082, 'longitude': 28.9784},
+    {'name': 'Ankara Merkez', 'latitude': 39.9334, 'longitude': 32.8597},
+    {'name': 'İzmir Merkez', 'latitude': 38.4192, 'longitude': 27.1287},
+  ];
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // Gerçek zamanlı rota verisi
@@ -359,6 +366,72 @@ class RouteViewScreen extends ConsumerWidget {
                           style: const TextStyle(fontSize: 16),
                         ),
                         const SizedBox(height: 16),
+
+                        // Başlangıç konumu seçimi
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.blue[50],
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.blue[200]!),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.location_on,
+                                    color: Colors.blue[700],
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Başlangıç Konumu',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.blue[700],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Rota optimizasyonu için başlangıç konumunu seçin:',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey[700],
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: ElevatedButton.icon(
+                                      onPressed: () => _selectStartLocation(
+                                        context,
+                                        stopsWithCoordinates,
+                                      ),
+                                      icon: const Icon(
+                                        Icons.my_location,
+                                        size: 16,
+                                      ),
+                                      label: const Text('Konum Seç'),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.blue[100],
+                                        foregroundColor: Colors.blue[800],
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 8,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
                         Card(
                           child: ListTile(
                             leading: const Icon(Icons.map, color: Colors.blue),
@@ -370,9 +443,11 @@ class RouteViewScreen extends ConsumerWidget {
                             onTap: () async {
                               Navigator.pop(context);
                               if (stopsWithCoordinates.isEmpty) return;
-                              final firstStop = stopsWithCoordinates.first;
-                              final googleMapsUrl =
-                                  'https://maps.google.com/maps?daddr=${firstStop.latitude},${firstStop.longitude}';
+
+                              // Google Maps için optimize edilmiş rota URL'si oluştur
+                              final googleMapsUrl = _buildGoogleMapsRouteUrl(
+                                stopsWithCoordinates,
+                              );
 
                               try {
                                 final googleUri = Uri.parse(googleMapsUrl);
@@ -408,25 +483,27 @@ class RouteViewScreen extends ConsumerWidget {
                             onTap: () async {
                               Navigator.pop(context);
                               if (stopsWithCoordinates.isEmpty) return;
-                              final firstStop = stopsWithCoordinates.first;
-                              final yandexMapsUrl =
-                                  'https://yandex.com.tr/maps/?pt=${firstStop.longitude},${firstStop.latitude}&z=16&l=map';
+
+                              // Google Maps için optimize edilmiş rota URL'si oluştur
+                              final googleMapsUrl = _buildGoogleMapsRouteUrl(
+                                stopsWithCoordinates,
+                              );
 
                               try {
-                                final yandexUri = Uri.parse(yandexMapsUrl);
-                                if (await canLaunchUrl(yandexUri)) {
+                                final googleUri = Uri.parse(googleMapsUrl);
+                                if (await canLaunchUrl(googleUri)) {
                                   await launchUrl(
-                                    yandexUri,
+                                    googleUri,
                                     mode: LaunchMode.externalApplication,
                                   );
                                   print(
-                                    '✅ Yandex Maps rota açıldı: $yandexMapsUrl',
+                                    '✅ Google Maps rota açıldı: $googleMapsUrl',
                                   );
                                 } else {
-                                  print('❌ Yandex Maps açılamadı');
+                                  print('❌ Google Maps açılamadı');
                                 }
                               } catch (e) {
-                                print('❌ Yandex Maps açılırken hata: $e');
+                                print('❌ Google Maps açılırken hata: $e');
                               }
                             },
                           ),
@@ -538,6 +615,16 @@ class RouteViewScreen extends ConsumerWidget {
               _buildDetailRow('Adres', stop.address, Icons.location_on),
               const Divider(),
               _buildDetailRow('Durum', stop.statusText, Icons.info),
+              if (stop.latitude != null && stop.longitude != null) ...[
+                const Divider(),
+                _buildDetailRow(
+                  'Koordinatlar',
+                  '${stop.latitude!.toStringAsFixed(6)}, ${stop.longitude!.toStringAsFixed(6)}',
+                  Icons.gps_fixed,
+                ),
+                const Divider(),
+                _buildCoordinateActions(context, stop),
+              ],
               if (stop.driverName != null) ...[
                 const Divider(),
                 _buildDetailRow(
@@ -605,6 +692,91 @@ class RouteViewScreen extends ConsumerWidget {
 
   String _formatDate(DateTime date) {
     return '${date.day}.${date.month}.${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+  }
+
+  /// Koordinat aksiyonları widget'ı
+  Widget _buildCoordinateActions(BuildContext context, StopModel stop) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.navigation, size: 24, color: Colors.grey[600]),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Navigasyon',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Bu durağa navigasyon başlat',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => _openInGoogleMaps(stop),
+                  icon: const Icon(Icons.map, size: 18),
+                  label: const Text('Google Maps'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue[50],
+                    foregroundColor: Colors.blue[800],
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => _openInYandexMaps(stop),
+                  icon: const Icon(Icons.map_outlined, size: 18),
+                  label: const Text('Yandex Maps'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red[50],
+                    foregroundColor: Colors.red[800],
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Google Maps'te durak konumunu açar
+  Future<void> _openInGoogleMaps(StopModel stop) async {
+    if (stop.latitude == null || stop.longitude == null) return;
+
+    final url =
+        'https://maps.google.com/maps?q=${stop.latitude},${stop.longitude}';
+    await _launchNavigationUrl(url, 'Google Maps');
+  }
+
+  /// Yandex Maps'te durak konumunu açar
+  Future<void> _openInYandexMaps(StopModel stop) async {
+    if (stop.latitude == null || stop.longitude == null) return;
+
+    final url =
+        'https://yandex.com.tr/maps/?pt=${stop.longitude},${stop.latitude}&z=16&l=map';
+    await _launchNavigationUrl(url, 'Yandex Maps');
   }
 
   void _showStopMenu(BuildContext context, WidgetRef ref, StopModel stop) {
@@ -1104,6 +1276,372 @@ class RouteViewScreen extends ConsumerWidget {
           ),
         );
       }
+    }
+  }
+
+  /// Google Maps için optimize edilmiş rota URL'si oluşturur
+  String _buildGoogleMapsRouteUrl(List<StopModel> stops) {
+    if (stops.isEmpty) return '';
+
+    // Durakları orderIndex'e göre sırala (optimize edilmiş sıralama)
+    final sortedStops = List<StopModel>.from(stops);
+    sortedStops.sort((a, b) => a.orderIndex.compareTo(b.orderIndex));
+
+    if (sortedStops.length == 1) {
+      // Sadece bir durak varsa
+      final stop = sortedStops.first;
+      return 'https://maps.google.com/maps?daddr=${stop.latitude},${stop.longitude}&dirflg=d';
+    }
+
+    // Tüm durakları waypoints olarak ekle
+    final allWaypoints = sortedStops
+        .map((stop) => '${stop.latitude},${stop.longitude}')
+        .join('|');
+
+    return 'https://maps.google.com/maps?waypoints=$allWaypoints&dirflg=d';
+  }
+
+  /// Başlangıç konumu seçimi için modal gösterir
+  Future<void> _selectStartLocation(
+    BuildContext context,
+    List<StopModel> stops,
+  ) async {
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.my_location, color: Colors.blue),
+            SizedBox(width: 8),
+            Text('Başlangıç Konumu Seç'),
+          ],
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Rota optimizasyonu için başlangıç konumunu seçin:',
+                style: TextStyle(fontSize: 16),
+              ),
+              const SizedBox(height: 16),
+
+              // Mevcut konum seçeneği
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.gps_fixed, color: Colors.green),
+                  title: const Text('Mevcut Konumum'),
+                  subtitle: const Text('GPS ile otomatik tespit'),
+                  onTap: () => Navigator.pop(context, {
+                    'type': 'current',
+                    'name': 'Mevcut Konumum',
+                  }),
+                ),
+              ),
+
+              // Önceden tanımlı konumlar
+              ..._predefinedLocations.map(
+                (location) => Card(
+                  child: ListTile(
+                    leading: const Icon(
+                      Icons.location_city,
+                      color: Colors.blue,
+                    ),
+                    title: Text(location['name']),
+                    subtitle: Text(
+                      '${location['latitude']}, ${location['longitude']}',
+                    ),
+                    onTap: () => Navigator.pop(context, {
+                      'type': 'predefined',
+                      'name': location['name'],
+                      'latitude': location['latitude'],
+                      'longitude': location['longitude'],
+                    }),
+                  ),
+                ),
+              ),
+
+              // Özel adres seçeneği
+              Card(
+                child: ListTile(
+                  leading: const Icon(
+                    Icons.edit_location,
+                    color: Colors.orange,
+                  ),
+                  title: const Text('Özel Adres'),
+                  subtitle: const Text('Manuel adres girişi'),
+                  onTap: () => Navigator.pop(context, {
+                    'type': 'custom',
+                    'name': 'Özel Adres',
+                  }),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('İptal'),
+          ),
+        ],
+      ),
+    );
+
+    if (result != null) {
+      await _handleStartLocationSelection(context, result, stops);
+    }
+  }
+
+  /// Başlangıç konumu seçimini işler
+  Future<void> _handleStartLocationSelection(
+    BuildContext context,
+    Map<String, dynamic> selection,
+    List<StopModel> stops,
+  ) async {
+    String? startLat;
+    String? startLon;
+    String startName = selection['name'];
+
+    switch (selection['type']) {
+      case 'current':
+        // Mevcut konumu al
+        try {
+          final geocodingService = GeocodingService();
+          final currentLocation = await geocodingService.getCurrentLocation();
+          if (currentLocation != null) {
+            startLat = currentLocation.latitude.toString();
+            startLon = currentLocation.longitude.toString();
+          } else {
+            throw Exception('Mevcut konum alınamadı');
+          }
+        } catch (e) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Konum alınamadı: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          return;
+        }
+        break;
+
+      case 'predefined':
+        startLat = selection['latitude'].toString();
+        startLon = selection['longitude'].toString();
+        break;
+
+      case 'custom':
+        // Özel adres girişi için modal göster
+        final customResult = await _showCustomAddressDialog(context);
+        if (customResult != null) {
+          startLat = customResult['latitude'].toString();
+          startLon = customResult['longitude'].toString();
+          startName = customResult['name'];
+        } else {
+          return;
+        }
+        break;
+    }
+
+    if (startLat != null && startLon != null) {
+      // Navigasyon seçeneklerini göster
+      await _showNavigationOptions(
+        context,
+        stops,
+        startLat,
+        startLon,
+        startName,
+      );
+    }
+  }
+
+  /// Özel adres girişi için dialog gösterir
+  Future<Map<String, dynamic>?> _showCustomAddressDialog(
+    BuildContext context,
+  ) async {
+    final addressController = TextEditingController();
+    bool isLoading = false;
+
+    return await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Özel Adres Gir'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: addressController,
+                decoration: const InputDecoration(
+                  labelText: 'Adres',
+                  hintText: 'Örn: İstanbul, Beşiktaş, Levent Mahallesi...',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 2,
+              ),
+              if (isLoading) ...[
+                const SizedBox(height: 16),
+                const CircularProgressIndicator(),
+                const SizedBox(height: 8),
+                const Text('Adres işleniyor...'),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: isLoading ? null : () => Navigator.pop(context),
+              child: const Text('İptal'),
+            ),
+            ElevatedButton(
+              onPressed: isLoading
+                  ? null
+                  : () async {
+                      if (addressController.text.trim().isEmpty) return;
+
+                      setState(() => isLoading = true);
+
+                      try {
+                        final geocodingService = GeocodingService();
+                        final coordinates = await geocodingService
+                            .addressToCoordinates(
+                              addressController.text.trim(),
+                            );
+
+                        if (coordinates != null) {
+                          Navigator.pop(context, {
+                            'latitude': coordinates.latitude,
+                            'longitude': coordinates.longitude,
+                            'name': addressController.text.trim(),
+                          });
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Adres bulunamadı'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Hata: $e'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      } finally {
+                        setState(() => isLoading = false);
+                      }
+                    },
+              child: const Text('Tamam'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Navigasyon seçeneklerini gösterir
+  Future<void> _showNavigationOptions(
+    BuildContext context,
+    List<StopModel> stops,
+    String startLat,
+    String startLon,
+    String startName,
+  ) async {
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.navigation, color: Colors.blue),
+            const SizedBox(width: 8),
+            const Text('Navigasyon Seçenekleri'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Başlangıç: $startName\n($startLat, $startLon)',
+              style: const TextStyle(fontSize: 14, color: Colors.grey),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+
+            // Google Maps
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.map, color: Colors.blue),
+                title: const Text('Google Maps'),
+                subtitle: const Text('Tüm durakları göster'),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                onTap: () async {
+                  Navigator.pop(context);
+                  final url = _buildGoogleMapsRouteUrlWithStart(
+                    stops,
+                    startLat,
+                    startLon,
+                  );
+                  await _launchNavigationUrl(url, 'Google Maps');
+                },
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('İptal'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Başlangıç konumu ile Google Maps URL'si oluşturur
+  String _buildGoogleMapsRouteUrlWithStart(
+    List<StopModel> stops,
+    String startLat,
+    String startLon,
+  ) {
+    if (stops.isEmpty) return '';
+
+    // Durakları orderIndex'e göre sırala (optimize edilmiş sıralama)
+    final sortedStops = List<StopModel>.from(stops);
+    sortedStops.sort((a, b) => a.orderIndex.compareTo(b.orderIndex));
+
+    if (sortedStops.length == 1) {
+      // Sadece bir durak varsa
+      final stop = sortedStops.first;
+      return 'https://maps.google.com/maps?saddr=$startLat,$startLon&daddr=${stop.latitude},${stop.longitude}&dirflg=d';
+    }
+
+    // Google Maps için tüm durakları waypoints olarak ekle
+    // Son durak da waypoints'e dahil edilmeli
+    final allWaypoints = sortedStops
+        .map((stop) => '${stop.latitude},${stop.longitude}')
+        .join('|');
+
+    // Başlangıç konumunu da waypoints'e ekle
+    final waypointsWithStart = '$startLat,$startLon|$allWaypoints';
+
+    return 'https://maps.google.com/maps?waypoints=$waypointsWithStart&dirflg=d';
+  }
+
+  /// Navigasyon URL'sini açar
+  Future<void> _launchNavigationUrl(String url, String appName) async {
+    try {
+      final uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+        print('✅ $appName açıldı: $url');
+      } else {
+        print('❌ $appName açılamadı');
+      }
+    } catch (e) {
+      print('❌ $appName açılırken hata: $e');
     }
   }
 }
