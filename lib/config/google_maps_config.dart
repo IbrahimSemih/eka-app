@@ -3,7 +3,8 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 /// Google Maps API Konfigürasyonu
 class GoogleMapsConfig {
   // API anahtarını environment variable'dan al
-  static String get apiKey => dotenv.env['GOOGLE_MAPS_API_KEY'] ?? 'YOUR_GOOGLE_MAPS_API_KEY';
+  static String get apiKey =>
+      dotenv.env['GOOGLE_MAPS_API_KEY'] ?? 'YOUR_GOOGLE_MAPS_API_KEY';
 
   // API endpoint'leri
   static const String routesApiUrl =
