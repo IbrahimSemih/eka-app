@@ -103,12 +103,22 @@ final completedStopsProvider = Provider<List<StopModel>>((ref) {
   );
 });
 
-// İstatistikler provider'ı
+// İstatistikler provider'ı - Route bazlı
 final stopsStatisticsProvider = Provider<StopsStatistics>((ref) {
-  final stopsAsync = ref.watch(stopsStreamProvider);
+  final routeAsync = ref.watch(mainRouteStreamProvider);
 
-  return stopsAsync.when(
-    data: (stops) {
+  return routeAsync.when(
+    data: (route) {
+      print('📊 Admin istatistikleri güncelleniyor...');
+
+      if (route == null) {
+        print('❌ Route null, boş istatistik döndürülüyor');
+        return StopsStatistics.empty();
+      }
+
+      final stops = route.stops;
+      print('📦 Toplam durak sayısı: ${stops.length}');
+
       final today = DateTime.now();
       final startOfDay = DateTime(today.year, today.month, today.day);
 
@@ -116,29 +126,50 @@ final stopsStatisticsProvider = Provider<StopsStatistics>((ref) {
         return stop.createdAt.isAfter(startOfDay);
       }).toList();
 
+      final pendingCount = stops
+          .where((s) => s.status == StopStatus.pending)
+          .length;
+      final assignedCount = stops
+          .where((s) => s.status == StopStatus.assigned)
+          .length;
+      final inProgressCount = stops
+          .where((s) => s.status == StopStatus.inProgress)
+          .length;
+      final completedCount = stops
+          .where((s) => s.status == StopStatus.completed)
+          .length;
+      final cancelledCount = stops
+          .where((s) => s.status == StopStatus.cancelled)
+          .length;
+
+      print('📊 Durum sayıları:');
+      print('   - Bekleyen: $pendingCount');
+      print('   - Atanan: $assignedCount');
+      print('   - Yolda: $inProgressCount');
+      print('   - Tamamlanan: $completedCount');
+      print('   - İptal: $cancelledCount');
+
       return StopsStatistics(
         totalStops: stops.length,
-        pendingStops: stops.where((s) => s.status == StopStatus.pending).length,
-        assignedStops: stops
-            .where((s) => s.status == StopStatus.assigned)
-            .length,
-        inProgressStops: stops
-            .where((s) => s.status == StopStatus.inProgress)
-            .length,
-        completedStops: stops
-            .where((s) => s.status == StopStatus.completed)
-            .length,
-        cancelledStops: stops
-            .where((s) => s.status == StopStatus.cancelled)
-            .length,
+        pendingStops: pendingCount,
+        assignedStops: assignedCount,
+        inProgressStops: inProgressCount,
+        completedStops: completedCount,
+        cancelledStops: cancelledCount,
         todayStops: todayStops.length,
         todayCompletedStops: todayStops
             .where((s) => s.status == StopStatus.completed)
             .length,
       );
     },
-    loading: () => StopsStatistics.empty(),
-    error: (_, __) => StopsStatistics.empty(),
+    loading: () {
+      print('⏳ Admin istatistikleri yükleniyor...');
+      return StopsStatistics.empty();
+    },
+    error: (error, stackTrace) {
+      print('❌ Admin istatistikleri hatası: $error');
+      return StopsStatistics.empty();
+    },
   );
 });
 

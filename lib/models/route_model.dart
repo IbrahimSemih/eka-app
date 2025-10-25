@@ -18,10 +18,14 @@ class RouteModel {
   int get totalStops => stops.length;
   int get pendingStops =>
       stops.where((s) => s.status == StopStatus.pending).length;
+  int get assignedStops =>
+      stops.where((s) => s.status == StopStatus.assigned).length;
   int get completedStops =>
       stops.where((s) => s.status == StopStatus.completed).length;
   int get inProgressStops =>
       stops.where((s) => s.status == StopStatus.inProgress).length;
+  int get cancelledStops =>
+      stops.where((s) => s.status == StopStatus.cancelled).length;
 
   RouteModel({
     required this.id,

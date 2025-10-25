@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../providers/driver_route_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../models/stop_model.dart';
@@ -722,6 +723,12 @@ class DriverRouteScreen extends ConsumerWidget {
     WidgetRef ref,
     StopModel stop,
   ) async {
+    print('🔄 _markAsCompleted çağrıldı');
+    print('📝 Stop ID: ${stop.id}');
+    print('👤 Müşteri: ${stop.customerName}');
+    print('📍 Adres: ${stop.address}');
+    print('📊 Mevcut durum: ${stop.status}');
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -753,11 +760,15 @@ class DriverRouteScreen extends ConsumerWidget {
       ),
     );
 
+    print('✅ Dialog sonucu: $confirmed');
+
     if (confirmed == true && context.mounted) {
+      print('🔄 Güncelleme başlatılıyor...');
       try {
-        await ref
-            .read(driverRouteNotifierProvider.notifier)
-            .updateStopStatus(stop.id, StopStatus.completed);
+        // Doğrudan Firestore güncellemesi
+        await _updateStopStatusInFirestore(ref, stop.id, StopStatus.completed);
+
+        print('✅ Güncelleme tamamlandı!');
 
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -772,6 +783,7 @@ class DriverRouteScreen extends ConsumerWidget {
           );
         }
       } catch (e) {
+        print('❌ Hata oluştu: $e');
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -784,6 +796,8 @@ class DriverRouteScreen extends ConsumerWidget {
           );
         }
       }
+    } else {
+      print('❌ Dialog iptal edildi veya context mounted değil');
     }
   }
 
@@ -792,6 +806,12 @@ class DriverRouteScreen extends ConsumerWidget {
     WidgetRef ref,
     StopModel stop,
   ) async {
+    print('🔄 _markAsFailed çağrıldı');
+    print('📝 Stop ID: ${stop.id}');
+    print('👤 Müşteri: ${stop.customerName}');
+    print('📍 Adres: ${stop.address}');
+    print('📊 Mevcut durum: ${stop.status}');
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -823,11 +843,15 @@ class DriverRouteScreen extends ConsumerWidget {
       ),
     );
 
+    print('✅ Dialog sonucu: $confirmed');
+
     if (confirmed == true && context.mounted) {
+      print('🔄 Güncelleme başlatılıyor...');
       try {
-        await ref
-            .read(driverRouteNotifierProvider.notifier)
-            .updateStopStatus(stop.id, StopStatus.cancelled);
+        // Doğrudan Firestore güncellemesi
+        await _updateStopStatusInFirestore(ref, stop.id, StopStatus.cancelled);
+
+        print('✅ Güncelleme tamamlandı!');
 
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -842,6 +866,7 @@ class DriverRouteScreen extends ConsumerWidget {
           );
         }
       } catch (e) {
+        print('❌ Hata oluştu: $e');
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -854,6 +879,114 @@ class DriverRouteScreen extends ConsumerWidget {
           );
         }
       }
+    } else {
+      print('❌ Dialog iptal edildi veya context mounted değil');
+    }
+  }
+
+  /// Firestore'da durak durumunu güncelle
+  Future<void> _updateStopStatusInFirestore(
+    WidgetRef ref,
+    String stopId,
+    StopStatus newStatus,
+  ) async {
+    try {
+      print('🔄 Firestore güncellemesi başlatılıyor...');
+      print('📝 Stop ID: $stopId');
+      print('📊 Yeni durum: ${_statusToString(newStatus)}');
+
+      final firestore = FirebaseFirestore.instance;
+
+      // Önce mevcut route'u bul
+      final currentUserAsync = ref.read(currentUserProvider);
+      if (currentUserAsync is! AsyncData) {
+        print('❌ Current user yüklenmemiş!');
+        return;
+      }
+
+      final currentUser = currentUserAsync.value;
+      if (currentUser == null) {
+        print('❌ Current user null!');
+        return;
+      }
+
+      print('👤 Current user: ${currentUser.email}');
+      print('🆔 User ID: ${currentUser.uid}');
+
+      // Sürücüye atanmış route'u bul
+      final routesSnapshot = await firestore
+          .collection('routes')
+          .where('assignedDriverId', isEqualTo: currentUser.uid)
+          .where('isActive', isEqualTo: true)
+          .get();
+
+      if (routesSnapshot.docs.isEmpty) {
+        print('❌ Atanmış route bulunamadı!');
+        return;
+      }
+
+      final routeDoc = routesSnapshot.docs.first;
+      print('📍 Route ID: ${routeDoc.id}');
+
+      final routeData = routeDoc.data();
+      final stops = routeData['stops'] as List<dynamic>? ?? [];
+
+      print('📦 Toplam durak sayısı: ${stops.length}');
+
+      // Durağı bul ve güncelle
+      bool found = false;
+      for (int i = 0; i < stops.length; i++) {
+        final stop = stops[i] as Map<String, dynamic>;
+        if (stop['id'] == stopId) {
+          print('✅ Durak bulundu: ${stop['customerName']}');
+          print('🔄 Eski durum: ${stop['status']}');
+
+          stops[i] = {
+            ...stop,
+            'status': _statusToString(newStatus),
+            'updatedAt': Timestamp.now(),
+            if (newStatus == StopStatus.completed)
+              'completedAt': Timestamp.now(),
+          };
+
+          print('✅ Yeni durum: ${_statusToString(newStatus)}');
+          found = true;
+          break;
+        }
+      }
+
+      if (!found) {
+        print('❌ Durak bulunamadı!');
+        return;
+      }
+
+      // Güncellenmiş durakları kaydet
+      print('💾 Firestore güncelleniyor...');
+      await firestore.collection('routes').doc(routeDoc.id).update({
+        'stops': stops,
+        'updatedAt': Timestamp.now(),
+      });
+
+      print('✅ Firestore güncellendi!');
+    } catch (error, stackTrace) {
+      print('❌ Firestore güncelleme hatası: $error');
+      print('📊 Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
+
+  String _statusToString(StopStatus status) {
+    switch (status) {
+      case StopStatus.pending:
+        return 'pending';
+      case StopStatus.assigned:
+        return 'assigned';
+      case StopStatus.inProgress:
+        return 'inProgress';
+      case StopStatus.completed:
+        return 'completed';
+      case StopStatus.cancelled:
+        return 'cancelled';
     }
   }
 

@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import '../models/stop_model.dart';
+import '../models/route_model.dart';
+import '../screens/admin/admin_google_maps_screen.dart';
 
 /// Durak kartı widget'ı - Bekliyor/Teslim Edildi durumlarını gösterir
 class StopCard extends StatelessWidget {
   final StopModel stop;
+  final RouteModel? route; // Rota bilgisi (harita için)
   final VoidCallback? onTap;
   final VoidCallback? onMenuTap;
   final int? displayIndex; // Rota sırası için görüntüleme index'i
@@ -11,6 +14,7 @@ class StopCard extends StatelessWidget {
   const StopCard({
     super.key,
     required this.stop,
+    this.route,
     this.onTap,
     this.onMenuTap,
     this.displayIndex,
@@ -278,6 +282,27 @@ class StopCard extends StatelessWidget {
                     ],
                   ),
                 ],
+
+                // Harita butonu (koordinatları varsa)
+                if (stop.latitude != null && stop.longitude != null) ...[
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () => _openInAppGoogleMaps(context),
+                      icon: const Icon(Icons.map, size: 18),
+                      label: const Text('Haritada Göster'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green[600],
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -341,5 +366,17 @@ class StopCard extends StatelessWidget {
     } else {
       return '${date.day}.${date.month}.${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
     }
+  }
+
+  /// Uygulama içi Google Maps'i açar
+  void _openInAppGoogleMaps(BuildContext context) {
+    if (route == null) return;
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AdminGoogleMapsScreen(route: route!),
+      ),
+    );
   }
 }

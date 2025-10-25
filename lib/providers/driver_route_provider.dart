@@ -127,8 +127,26 @@ class DriverRouteNotifier extends Notifier<AsyncValue<RouteModel?>> {
   /// Durak durumunu güncelle
   Future<void> updateStopStatus(String stopId, StopStatus newStatus) async {
     try {
-      final currentRoute = state.value;
-      if (currentRoute == null) return;
+      print('🔄 Driver route provider: Durak durumu güncelleniyor...');
+      print('📝 Stop ID: $stopId');
+      print('📊 Yeni durum: ${_statusToString(newStatus)}');
+
+      final currentRouteAsync = state;
+      print('📊 State durumu: ${currentRouteAsync.runtimeType}');
+
+      if (currentRouteAsync is! AsyncData<RouteModel?>) {
+        print('❌ State AsyncData değil: ${currentRouteAsync.runtimeType}');
+        return;
+      }
+
+      final currentRoute = currentRouteAsync.value;
+      if (currentRoute == null) {
+        print('❌ Current route null!');
+        return;
+      }
+
+      print('📍 Route ID: ${currentRoute.id}');
+      print('👤 Assigned Driver ID: ${currentRoute.assignedDriverId}');
 
       final firestore = FirebaseFirestore.instance;
       final routeDoc = await firestore
@@ -136,15 +154,24 @@ class DriverRouteNotifier extends Notifier<AsyncValue<RouteModel?>> {
           .doc(currentRoute.id)
           .get();
 
-      if (!routeDoc.exists) return;
+      if (!routeDoc.exists) {
+        print('❌ Route document does not exist!');
+        return;
+      }
 
       final routeData = routeDoc.data() as Map<String, dynamic>;
       final stops = routeData['stops'] as List<dynamic>? ?? [];
 
+      print('📦 Toplam durak sayısı: ${stops.length}');
+
       // Durağı bul ve güncelle
+      bool found = false;
       for (int i = 0; i < stops.length; i++) {
         final stop = stops[i] as Map<String, dynamic>;
         if (stop['id'] == stopId) {
+          print('✅ Durak bulundu: ${stop['customerName']}');
+          print('🔄 Eski durum: ${stop['status']}');
+
           stops[i] = {
             ...stop,
             'status': _statusToString(newStatus),
@@ -152,19 +179,34 @@ class DriverRouteNotifier extends Notifier<AsyncValue<RouteModel?>> {
             if (newStatus == StopStatus.completed)
               'completedAt': Timestamp.now(),
           };
+
+          print('✅ Yeni durum: ${_statusToString(newStatus)}');
+          found = true;
           break;
         }
       }
 
+      if (!found) {
+        print('❌ Durak bulunamadı!');
+        return;
+      }
+
       // Güncellenmiş durakları kaydet
+      print('💾 Firestore güncelleniyor...');
       await firestore.collection('routes').doc(currentRoute.id).update({
         'stops': stops,
         'updatedAt': Timestamp.now(),
       });
 
+      print('✅ Firestore güncellendi!');
+
       // Yerel state'i güncelle
+      print('🔄 Yerel state güncelleniyor...');
       await loadDriverRoute(currentRoute.assignedDriverId!);
+      print('✅ Yerel state güncellendi!');
     } catch (error, stackTrace) {
+      print('❌ Hata: $error');
+      print('📊 Stack trace: $stackTrace');
       state = AsyncValue.error(error, stackTrace);
     }
   }

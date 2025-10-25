@@ -12,6 +12,10 @@ android {
     namespace = "com.example.eka_app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = "29.0.13113456"
+    
+    buildFeatures {
+        buildConfig = true
+    }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11

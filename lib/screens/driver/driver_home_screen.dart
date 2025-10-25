@@ -141,7 +141,7 @@ class DriverHomeScreen extends ConsumerWidget {
               GridView.count(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: 2,
+                crossAxisCount: 1,
                 crossAxisSpacing: 16,
                 mainAxisSpacing: 16,
                 children: [
@@ -151,21 +151,6 @@ class DriverHomeScreen extends ConsumerWidget {
                     title: 'Görevlerim',
                     subtitle: 'Atanan teslimatlar',
                     color: Colors.blue,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const DriverRouteScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  _buildMenuCard(
-                    context,
-                    icon: Icons.map,
-                    title: 'Rotam',
-                    subtitle: 'Optimize edilmiş rota',
-                    color: Colors.purple,
                     onTap: () {
                       Navigator.push(
                         context,

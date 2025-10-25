@@ -8,6 +8,7 @@ import '../../widgets/stop_card.dart';
 import '../../widgets/driver_assignment_modal.dart';
 import '../../services/geocoding_service.dart';
 import 'add_stop_screen.dart';
+import 'admin_google_maps_screen.dart';
 
 /// Ana rota görüntüleme ekranı - Gerçek zamanlı güncelleme ile
 class RouteViewScreen extends ConsumerWidget {
@@ -87,14 +88,16 @@ class RouteViewScreen extends ConsumerWidget {
                       final stop = route.stops[index];
                       return StopCard(
                         stop: stop,
+                        route: route,
                         displayIndex: index,
-                        onTap: () => _showStopDetails(context, ref, stop),
+                        onTap: () =>
+                            _showStopDetails(context, ref, stop, route),
                         onMenuTap: () {
                           print(
                             '🎯 StopCard onMenuTap çağrıldı: ${stop.customerName}',
                           );
                           print('🚀 _showStopMenu çağrılıyor...');
-                          _showStopMenu(context, ref, stop);
+                          _showStopMenu(context, ref, stop, route);
                           print('🏁 _showStopMenu çağrısı tamamlandı');
                         },
                       );
@@ -324,214 +327,19 @@ class RouteViewScreen extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 16),
-          // Navigasyon butonu
+          // Harita butonu
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: () {
-                // Koordinatları olan durakları filtrele
-                final stopsWithCoordinates = route.stops
-                    .where(
-                      (stop) => stop.latitude != null && stop.longitude != null,
-                    )
-                    .toList();
-
-                if (stopsWithCoordinates.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Navigasyon için koordinatları olan durak bulunamadı',
-                      ),
-                      backgroundColor: Colors.orange,
-                    ),
-                  );
-                  return;
-                }
-
-                showDialog(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: const Row(
-                      children: [
-                        Icon(Icons.navigation, color: Colors.blue),
-                        SizedBox(width: 8),
-                        Text('Rota Navigasyonu'),
-                      ],
-                    ),
-                    content: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          '${stopsWithCoordinates.length} durak için optimize edilmiş rota navigasyonu',
-                          style: const TextStyle(fontSize: 16),
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Başlangıç konumu seçimi
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.blue[50],
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.blue[200]!),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.location_on,
-                                    color: Colors.blue[700],
-                                    size: 20,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Başlangıç Konumu',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.blue[700],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Rota optimizasyonu için başlangıç konumunu seçin:',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey[700],
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: ElevatedButton.icon(
-                                      onPressed: () => _selectStartLocation(
-                                        context,
-                                        stopsWithCoordinates,
-                                      ),
-                                      icon: const Icon(
-                                        Icons.my_location,
-                                        size: 16,
-                                      ),
-                                      label: const Text('Konum Seç'),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.blue[100],
-                                        foregroundColor: Colors.blue[800],
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 8,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Card(
-                          child: ListTile(
-                            leading: const Icon(Icons.map, color: Colors.blue),
-                            title: const Text('Google Maps'),
-                            trailing: const Icon(
-                              Icons.arrow_forward_ios,
-                              size: 16,
-                            ),
-                            onTap: () async {
-                              Navigator.pop(context);
-                              if (stopsWithCoordinates.isEmpty) return;
-
-                              // Google Maps için optimize edilmiş rota URL'si oluştur
-                              final googleMapsUrl = _buildGoogleMapsRouteUrl(
-                                stopsWithCoordinates,
-                              );
-
-                              try {
-                                final googleUri = Uri.parse(googleMapsUrl);
-                                if (await canLaunchUrl(googleUri)) {
-                                  await launchUrl(
-                                    googleUri,
-                                    mode: LaunchMode.externalApplication,
-                                  );
-                                  print(
-                                    '✅ Google Maps rota açıldı: $googleMapsUrl',
-                                  );
-                                } else {
-                                  print('❌ Google Maps açılamadı');
-                                }
-                              } catch (e) {
-                                print('❌ Google Maps açılırken hata: $e');
-                              }
-                            },
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Card(
-                          child: ListTile(
-                            leading: const Icon(
-                              Icons.map_outlined,
-                              color: Colors.red,
-                            ),
-                            title: const Text('Yandex Maps'),
-                            trailing: const Icon(
-                              Icons.arrow_forward_ios,
-                              size: 16,
-                            ),
-                            onTap: () async {
-                              Navigator.pop(context);
-                              if (stopsWithCoordinates.isEmpty) return;
-
-                              // Google Maps için optimize edilmiş rota URL'si oluştur
-                              final googleMapsUrl = _buildGoogleMapsRouteUrl(
-                                stopsWithCoordinates,
-                              );
-
-                              try {
-                                final googleUri = Uri.parse(googleMapsUrl);
-                                if (await canLaunchUrl(googleUri)) {
-                                  await launchUrl(
-                                    googleUri,
-                                    mode: LaunchMode.externalApplication,
-                                  );
-                                  print(
-                                    '✅ Google Maps rota açıldı: $googleMapsUrl',
-                                  );
-                                } else {
-                                  print('❌ Google Maps açılamadı');
-                                }
-                              } catch (e) {
-                                print('❌ Google Maps açılırken hata: $e');
-                              }
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('İptal'),
-                      ),
-                    ],
-                  ),
-                );
-              },
-              icon: const Icon(Icons.navigation, size: 20),
-              label: const Text('Navigasyona Git'),
+              onPressed: () => _openInAppGoogleMaps(context, route),
+              icon: const Icon(Icons.map, size: 20),
+              label: const Text('Haritada Göster'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: Colors.blue[800],
-                padding: const EdgeInsets.symmetric(vertical: 16),
+                backgroundColor: Colors.green[600],
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 2,
-                textStyle: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+                  borderRadius: BorderRadius.circular(8),
                 ),
               ),
             ),
@@ -574,7 +382,12 @@ class RouteViewScreen extends ConsumerWidget {
     );
   }
 
-  void _showStopDetails(BuildContext context, WidgetRef ref, StopModel stop) {
+  void _showStopDetails(
+    BuildContext context,
+    WidgetRef ref,
+    StopModel stop,
+    RouteModel route,
+  ) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -623,7 +436,7 @@ class RouteViewScreen extends ConsumerWidget {
                   Icons.gps_fixed,
                 ),
                 const Divider(),
-                _buildCoordinateActions(context, stop),
+                _buildCoordinateActions(context, stop, route),
               ],
               if (stop.driverName != null) ...[
                 const Divider(),
@@ -695,7 +508,11 @@ class RouteViewScreen extends ConsumerWidget {
   }
 
   /// Koordinat aksiyonları widget'ı
-  Widget _buildCoordinateActions(BuildContext context, StopModel stop) {
+  Widget _buildCoordinateActions(
+    BuildContext context,
+    StopModel stop,
+    RouteModel route,
+  ) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Column(
@@ -727,59 +544,43 @@ class RouteViewScreen extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () => _openInGoogleMaps(stop),
-                  icon: const Icon(Icons.map, size: 18),
-                  label: const Text('Google Maps'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue[50],
-                    foregroundColor: Colors.blue[800],
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                  ),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () => _openInAppGoogleMaps(context, route),
+              icon: const Icon(Icons.map, size: 18),
+              label: const Text('Haritada Göster'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green[600],
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () => _openInYandexMaps(stop),
-                  icon: const Icon(Icons.map_outlined, size: 18),
-                  label: const Text('Yandex Maps'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red[50],
-                    foregroundColor: Colors.red[800],
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  /// Google Maps'te durak konumunu açar
-  Future<void> _openInGoogleMaps(StopModel stop) async {
-    if (stop.latitude == null || stop.longitude == null) return;
-
-    final url =
-        'https://maps.google.com/maps?q=${stop.latitude},${stop.longitude}';
-    await _launchNavigationUrl(url, 'Google Maps');
+  /// Uygulama içi Google Maps'i açar
+  void _openInAppGoogleMaps(BuildContext context, RouteModel route) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AdminGoogleMapsScreen(route: route),
+      ),
+    );
   }
 
-  /// Yandex Maps'te durak konumunu açar
-  Future<void> _openInYandexMaps(StopModel stop) async {
-    if (stop.latitude == null || stop.longitude == null) return;
-
-    final url =
-        'https://yandex.com.tr/maps/?pt=${stop.longitude},${stop.latitude}&z=16&l=map';
-    await _launchNavigationUrl(url, 'Yandex Maps');
-  }
-
-  void _showStopMenu(BuildContext context, WidgetRef ref, StopModel stop) {
+  void _showStopMenu(
+    BuildContext context,
+    WidgetRef ref,
+    StopModel stop,
+    RouteModel route,
+  ) {
     print('📋 Durak menüsü açılıyor: ${stop.customerName}');
 
     try {
@@ -811,7 +612,7 @@ class RouteViewScreen extends ConsumerWidget {
                   onTap: () {
                     print('ℹ️ Detaylar seçildi');
                     Navigator.pop(context);
-                    _showStopDetails(context, ref, stop);
+                    _showStopDetails(context, ref, stop, route);
                   },
                 ),
                 if (stop.status == StopStatus.pending)
