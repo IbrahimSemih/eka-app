@@ -7,6 +7,8 @@ import '../auth/login_screen.dart';
 import 'add_stop_screen.dart';
 import 'stops_list_screen.dart';
 import 'route_view_screen.dart';
+import 'add_driver_screen.dart';
+import 'drivers_management_screen.dart';
 
 class AdminHomeScreen extends ConsumerWidget {
   const AdminHomeScreen({super.key});
@@ -280,9 +282,25 @@ class AdminHomeScreen extends ConsumerWidget {
                     subtitle: 'Yeni sürücü',
                     color: Colors.purple,
                     onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Bu özellik sonraki aşamada eklenecek'),
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const AddDriverScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildMenuCard(
+                    context,
+                    icon: Icons.people,
+                    title: 'Sürücü Yönetimi',
+                    subtitle: 'Tüm sürücüler',
+                    color: Colors.deepPurple,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const DriversManagementScreen(),
                         ),
                       );
                     },

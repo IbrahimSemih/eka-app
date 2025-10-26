@@ -4,6 +4,7 @@ import '../models/route_model.dart';
 import '../models/stop_model.dart';
 import '../models/user_model.dart';
 import 'auth_provider.dart';
+import 'stops_provider.dart';
 
 /// Sürücünün atanmış rotasını getiren provider
 final driverRouteStreamProvider = StreamProvider<RouteModel?>((ref) {
@@ -15,19 +16,30 @@ final driverRouteStreamProvider = StreamProvider<RouteModel?>((ref) {
         return Stream.value(null);
       }
 
-      // Sürücüye atanmış rotayı bul
+      // Ana rotayı al (sürücüye atanmış durakları içeren)
       return FirebaseFirestore.instance
           .collection('routes')
-          .where('assignedDriverId', isEqualTo: user.uid)
-          .where('isActive', isEqualTo: true)
+          .doc(mainRouteId) // Ana rota ID'si
           .snapshots()
           .map((snapshot) {
-            if (snapshot.docs.isEmpty) {
+            if (!snapshot.exists) {
               return null;
             }
 
-            // İlk atanmış rotayı döndür (genellikle bir sürücüye bir rota atanır)
-            return RouteModel.fromFirestore(snapshot.docs.first);
+            final route = RouteModel.fromFirestore(snapshot);
+
+            // Sürücüye atanmış durakları filtrele
+            final assignedStops = route.stops
+                .where((stop) => stop.driverId == user.uid)
+                .toList();
+
+            // Eğer sürücüye atanmış durak yoksa null döndür
+            if (assignedStops.isEmpty) {
+              return null;
+            }
+
+            // Sadece sürücüye atanmış durakları içeren rota oluştur
+            return route.copyWith(stops: assignedStops);
           });
     },
     loading: () => Stream.value(null),
@@ -106,19 +118,33 @@ class DriverRouteNotifier extends Notifier<AsyncValue<RouteModel?>> {
   Future<void> loadDriverRoute(String driverId) async {
     state = const AsyncValue.loading();
     try {
+      // Ana rotayı al
       final snapshot = await FirebaseFirestore.instance
           .collection('routes')
-          .where('assignedDriverId', isEqualTo: driverId)
-          .where('isActive', isEqualTo: true)
+          .doc(mainRouteId)
           .get();
 
-      if (snapshot.docs.isEmpty) {
+      if (!snapshot.exists) {
         state = const AsyncValue.data(null);
         return;
       }
 
-      final route = RouteModel.fromFirestore(snapshot.docs.first);
-      state = AsyncValue.data(route);
+      final route = RouteModel.fromFirestore(snapshot);
+
+      // Sürücüye atanmış durakları filtrele
+      final assignedStops = route.stops
+          .where((stop) => stop.driverId == driverId)
+          .toList();
+
+      // Eğer sürücüye atanmış durak yoksa null döndür
+      if (assignedStops.isEmpty) {
+        state = const AsyncValue.data(null);
+        return;
+      }
+
+      // Sadece sürücüye atanmış durakları içeren rota oluştur
+      final driverRoute = route.copyWith(stops: assignedStops);
+      state = AsyncValue.data(driverRoute);
     } catch (error, stackTrace) {
       state = AsyncValue.error(error, stackTrace);
     }
@@ -202,7 +228,13 @@ class DriverRouteNotifier extends Notifier<AsyncValue<RouteModel?>> {
 
       // Yerel state'i güncelle
       print('🔄 Yerel state güncelleniyor...');
-      await loadDriverRoute(currentRoute.assignedDriverId!);
+      // Sürücü ID'sini currentUser'dan al
+      final currentUserAsync = ref.read(currentUserProvider);
+      currentUserAsync.whenData((user) {
+        if (user != null) {
+          loadDriverRoute(user.uid);
+        }
+      });
       print('✅ Yerel state güncellendi!');
     } catch (error, stackTrace) {
       print('❌ Hata: $error');

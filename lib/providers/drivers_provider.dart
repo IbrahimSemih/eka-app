@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
+import '../services/auth_service.dart';
 
 /// Sürücü listesi provider'ı
 final driversStreamProvider = StreamProvider<List<UserModel>>((ref) {
@@ -53,9 +54,18 @@ class DriversNotifier extends Notifier<AsyncValue<List<UserModel>>> {
     required String password,
   }) async {
     try {
-      // Bu işlem auth_service'te yapılacak
-      // Şimdilik sadece placeholder
-      await loadDrivers(); // Listeyi yenile
+      // AuthService'i import etmek için gerekli
+      final authService = AuthService();
+
+      // Sürücü oluştur
+      await authService.createDriverByAdmin(
+        email: email,
+        name: name,
+        password: password,
+      );
+
+      // Listeyi yenile
+      await loadDrivers();
     } catch (error, stackTrace) {
       state = AsyncValue.error(error, stackTrace);
     }

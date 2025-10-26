@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../models/stop_model.dart';
@@ -285,10 +286,11 @@ class StopsNotifier extends Notifier<void> {
     if (routeDoc.exists) {
       // Rota sisteminde güncelle
       final currentRoute = RouteModel.fromFirestore(routeDoc);
+
       final updatedStops = currentRoute.stops.map((stop) {
         if (stop.id == stopId) {
           // Güncellemeleri uygula
-          return stop.copyWith(
+          final updatedStop = stop.copyWith(
             status: updates['status'] != null
                 ? _statusFromString(updates['status'])
                 : stop.status,
@@ -299,6 +301,8 @@ class StopsNotifier extends Notifier<void> {
                 ? (updates['completedAt'] as Timestamp).toDate()
                 : stop.completedAt,
           );
+
+          return updatedStop;
         }
         return stop;
       }).toList();

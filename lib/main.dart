@@ -13,15 +13,18 @@ import 'models/user_model.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Environment variables'ı yükle
-  await dotenv.load(fileName: ".env");
+  // Environment variables'ı yükle (opsiyonel)
+  try {
+    await dotenv.load(fileName: ".env");
+  } catch (e) {
+    // .env dosyası yoksa devam et
+  }
 
   // Firebase'i başlat
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // DEBUG: Tüm oturumları temizle
+  // Tüm oturumları temizle
   await FirebaseAuth.instance.signOut();
-  print('🔥 DEBUG - Tüm oturumlar temizlendi');
 
   runApp(const ProviderScope(child: EkaApp()));
 }
@@ -86,11 +89,6 @@ class AuthWrapper extends ConsumerWidget {
         if (user == null) {
           return const LoginScreen();
         }
-
-        // DEBUG: Kullanıcı bilgilerini konsola yazdır
-        print('🔍 DEBUG - User Email: ${user.email}');
-        print('🔍 DEBUG - User Role: ${user.role}');
-        print('🔍 DEBUG - Is Admin: ${user.role == UserRole.admin}');
 
         // Rol bazlı yönlendirme
         if (user.role == UserRole.admin) {

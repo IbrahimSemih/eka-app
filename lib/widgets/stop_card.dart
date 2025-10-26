@@ -9,6 +9,7 @@ class StopCard extends StatelessWidget {
   final RouteModel? route; // Rota bilgisi (harita için)
   final VoidCallback? onTap;
   final VoidCallback? onMenuTap;
+  final VoidCallback? onAssignDriver; // Sürücü atama callback'i
   final int? displayIndex; // Rota sırası için görüntüleme index'i
 
   const StopCard({
@@ -17,6 +18,7 @@ class StopCard extends StatelessWidget {
     this.route,
     this.onTap,
     this.onMenuTap,
+    this.onAssignDriver,
     this.displayIndex,
   });
 
@@ -215,6 +217,38 @@ class StopCard extends StatelessWidget {
                         ),
                       ),
                     ],
+                  ),
+                ],
+
+                // Sürücü atama butonu (sürücü yoksa veya değiştirmek istiyorsa)
+                if (onAssignDriver != null && !isCompleted) ...[
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: onAssignDriver,
+                      icon: Icon(
+                        stop.driverName != null
+                            ? Icons.swap_horiz
+                            : Icons.person_add,
+                        size: 18,
+                      ),
+                      label: Text(
+                        stop.driverName != null
+                            ? 'Sürücü Değiştir'
+                            : 'Sürücü Ata',
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: stop.driverName != null
+                            ? Colors.orange[600]
+                            : Colors.purple[600],
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
                   ),
                 ],
 

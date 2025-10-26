@@ -109,6 +109,45 @@ class AuthService {
     }
   }
 
+  // Admin tarafından sürücü oluşturma
+  Future<UserModel?> createDriverByAdmin({
+    required String email,
+    required String password,
+    required String name,
+  }) async {
+    try {
+      // Firebase Auth ile sürücü hesabı oluştur
+      UserCredential userCredential = await _auth
+          .createUserWithEmailAndPassword(email: email, password: password);
+
+      // Sürücü verisini oluştur
+      UserModel newDriver = UserModel(
+        uid: userCredential.user!.uid,
+        email: email,
+        name: name,
+        role: UserRole.driver,
+        createdAt: DateTime.now(),
+      );
+
+      // Firestore'a sürücü verisini kaydet
+      await _firestore
+          .collection('users')
+          .doc(userCredential.user!.uid)
+          .set(newDriver.toFirestore());
+
+      // Admin oturumunu geri yükle (çünkü createUserWithEmailAndPassword admin'i çıkarır)
+      // Bu işlem admin panelinde yapılacak
+
+      return newDriver;
+    } on FirebaseAuthException catch (e) {
+      print('Sürücü oluşturma hatası: ${e.message}');
+      throw _handleAuthException(e);
+    } catch (e) {
+      print('Genel sürücü oluşturma hatası: $e');
+      rethrow;
+    }
+  }
+
   // Kullanıcı verilerini güncelle
   Future<void> updateUserData(String uid, Map<String, dynamic> data) async {
     try {
