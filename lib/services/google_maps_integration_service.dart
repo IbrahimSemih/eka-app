@@ -3,6 +3,7 @@ import '../models/stop_model.dart';
 import 'google_routes_service.dart';
 import 'google_geocoding_service.dart';
 import 'google_navigation_service.dart';
+import 'google_directions_service.dart';
 
 /// Google Maps Entegrasyon Servisi
 ///
@@ -11,6 +12,7 @@ class GoogleMapsIntegrationService {
   late final GoogleRoutesService _routesService;
   late final GoogleGeocodingService _geocodingService;
   late final GoogleNavigationService _navigationService;
+  late final GoogleDirectionsService _directionsService;
 
   GoogleMapsIntegrationService() {
     if (!GoogleMapsConfig.isApiKeyValid) {
@@ -22,6 +24,9 @@ class GoogleMapsIntegrationService {
     _routesService = GoogleRoutesService(apiKey: GoogleMapsConfig.apiKey);
     _geocodingService = GoogleGeocodingService(apiKey: GoogleMapsConfig.apiKey);
     _navigationService = GoogleNavigationService(
+      apiKey: GoogleMapsConfig.apiKey,
+    );
+    _directionsService = GoogleDirectionsService(
       apiKey: GoogleMapsConfig.apiKey,
     );
   }
@@ -268,5 +273,102 @@ class GoogleMapsIntegrationService {
 
     print('✅ Tüm duraklar güncellendi: ${updatedStops.length} durak');
     return updatedStops;
+  }
+
+  /// Waypointler arasında polyline oluşturur
+  Future<Map<String, dynamic>?> getPolylineRoute({
+    required List<StopModel> stops,
+    required double startLatitude,
+    required double startLongitude,
+    String travelMode = 'driving',
+    bool avoidHighways = false,
+    bool avoidTolls = false,
+  }) async {
+    print('🗺️ Google Directions API ile polyline oluşturuluyor...');
+
+    try {
+      final routeData = await _directionsService.getPolylineRoute(
+        stops: stops,
+        startLatitude: startLatitude,
+        startLongitude: startLongitude,
+        travelMode: travelMode,
+        avoidHighways: avoidHighways,
+        avoidTolls: avoidTolls,
+      );
+
+      if (routeData != null) {
+        print(
+          '✅ Polyline oluşturuldu: ${routeData['polylinePoints']?.length ?? 0} nokta',
+        );
+        print('📏 Toplam mesafe: ${routeData['totalDistanceKm']} km');
+        print('⏱️ Toplam süre: ${routeData['formattedDuration']}');
+      } else {
+        print('❌ Polyline oluşturulamadı');
+      }
+
+      return routeData;
+    } catch (e) {
+      print('❌ Polyline oluşturma hatası: $e');
+      return null;
+    }
+  }
+
+  /// İki nokta arasında basit polyline oluşturur
+  Future<Map<String, dynamic>?> getSimplePolyline({
+    required double startLatitude,
+    required double startLongitude,
+    required double endLatitude,
+    required double endLongitude,
+    String travelMode = 'driving',
+  }) async {
+    print('🗺️ İki nokta arası polyline oluşturuluyor...');
+
+    try {
+      final routeData = await _directionsService.getSimplePolyline(
+        startLatitude: startLatitude,
+        startLongitude: startLongitude,
+        endLatitude: endLatitude,
+        endLongitude: endLongitude,
+        travelMode: travelMode,
+      );
+
+      if (routeData != null) {
+        print('✅ Basit polyline oluşturuldu');
+      } else {
+        print('❌ Basit polyline oluşturulamadı');
+      }
+
+      return routeData;
+    } catch (e) {
+      print('❌ Basit polyline oluşturma hatası: $e');
+      return null;
+    }
+  }
+
+  /// Alternatif rotaları getirir
+  Future<List<Map<String, dynamic>>> getAlternativeRoutes({
+    required List<StopModel> stops,
+    required double startLatitude,
+    required double startLongitude,
+    String travelMode = 'driving',
+    int maxAlternatives = 3,
+  }) async {
+    print('🗺️ Alternatif rotalar alınıyor...');
+
+    try {
+      final alternativeRoutes = await _directionsService.getAlternativeRoutes(
+        stops: stops,
+        startLatitude: startLatitude,
+        startLongitude: startLongitude,
+        travelMode: travelMode,
+        maxAlternatives: maxAlternatives,
+      );
+
+      print('✅ ${alternativeRoutes.length} alternatif rota bulundu');
+      return alternativeRoutes;
+    } catch (e) {
+      print('❌ Alternatif rotalar alınamadı: $e');
+      return [];
+    }
   }
 }

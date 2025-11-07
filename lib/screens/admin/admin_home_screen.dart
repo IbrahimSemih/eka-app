@@ -4,6 +4,8 @@ import '../../providers/auth_provider.dart';
 import '../../providers/stops_provider.dart';
 import '../../services/geocoding_service.dart';
 import '../auth/login_screen.dart';
+import '../demo/polyline_demo_screen.dart';
+import '../demo/advanced_polyline_demo_screen.dart';
 import 'add_stop_screen.dart';
 import 'stops_list_screen.dart';
 import 'route_view_screen.dart';
@@ -301,6 +303,36 @@ class AdminHomeScreen extends ConsumerWidget {
                         context,
                         MaterialPageRoute(
                           builder: (_) => const DriversManagementScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildMenuCard(
+                    context,
+                    icon: Icons.map,
+                    title: 'Polyline Demo',
+                    subtitle: 'Rota çizimi test',
+                    color: Colors.cyan,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const PolylineDemoScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildMenuCard(
+                    context,
+                    icon: Icons.auto_awesome,
+                    title: 'Gelişmiş Polyline',
+                    subtitle: 'Animasyon & özellikler',
+                    color: Colors.deepPurple,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const AdvancedPolylineDemoScreen(),
                         ),
                       );
                     },

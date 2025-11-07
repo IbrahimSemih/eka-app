@@ -8,6 +8,7 @@ import 'providers/auth_provider.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/admin/admin_home_screen.dart';
 import 'screens/driver/driver_home_screen.dart';
+import 'screens/demo/polyline_demo_screen.dart';
 import 'models/user_model.dart';
 
 void main() async {
